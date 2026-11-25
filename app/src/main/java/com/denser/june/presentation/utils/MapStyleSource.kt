@@ -22,8 +22,9 @@ fun MapStyleSource.toBaseStyle(): BaseStyle = when (this) {
 }
 
 fun MapStyleSource.applyToMap(map: MapLibreMap, onStyleLoaded: (Style) -> Unit) {
+    val callback = Style.OnStyleLoaded { style -> onStyleLoaded(style) }
     when (this) {
-        is MapStyleSource.Url -> map.setStyle(url, onStyleLoaded)
-        is MapStyleSource.Json -> map.setStyle(Style.Builder().fromJson(json), onStyleLoaded)
+        is MapStyleSource.Url -> map.setStyle(url, callback)
+        is MapStyleSource.Json -> map.setStyle(Style.Builder().fromJson(json), callback)
     }
 }
