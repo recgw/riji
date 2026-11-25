@@ -474,6 +474,8 @@
 
     <!-- Maps & Location -->
     <string name="api_credentials">API 访问凭证</string>
+    <string name="amap">高德地图</string>
+    <string name="amap_auto_notice">高德地图使用栅格瓦片，无需 API 密钥，已自动配置。</string>
     <string name="carto_auto_notice">CARTO 无需 API 密钥，已自动配置。</string>
     <string name="check_api_key_or_internet">请检查您的 API 密钥或网络连接</string>
     <string name="configure_api_key_for_preview">请在下方配置并测试 API 密钥以启用预览功能</string>

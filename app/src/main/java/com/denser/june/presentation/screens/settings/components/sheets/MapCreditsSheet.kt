@@ -34,6 +34,7 @@ fun MapCreditsBottomSheet(
     ) {
         val items = listOf(
             AttributionItem("MapLibre SDK", Constants.MAPLIBRE_URL, "Open-source map rendering engine"),
+            AttributionItem("AMap (高德地图)", Constants.AMAP_URL, "© 高德地图 AutoNavi"),
             AttributionItem("MapTiler", Constants.MAPTILER_COPYRIGHT_URL, "© MapTiler © OpenStreetMap contributors"),
             AttributionItem("Stadia Maps", Constants.STADIA_ATTRIBUTION_URL, "© Stadia Maps © OpenStreetMap contributors"),
             AttributionItem("CARTO", Constants.CARTO_ATTRIBUTION_URL, "© CARTO © OpenStreetMap contributors"),

@@ -27,40 +27,97 @@ object MapProviderUtils : KoinComponent {
     private val context: Context by inject()
     private val locationProvider: LocationProvider by inject()
 
-    fun getStyleUrlWithKeys(
+    fun getStyleSourceWithKeys(
         provider: MapStyleProvider,
         isDark: Boolean,
         mapTilerKey: String,
         stadiaKey: String
-    ): String {
+    ): MapStyleSource {
         return when (provider) {
+            MapStyleProvider.AMAP -> MapStyleSource.Json(buildAmapStyleJson(isDark))
             MapStyleProvider.MAPTILER -> {
                 val styleName = if (isDark) "streets-v4-dark" else "streets-v4"
-                "${Constants.MAPTILER_MAPS_BASE_URL}$styleName/style.json?key=$mapTilerKey"
+                MapStyleSource.Url("${Constants.MAPTILER_MAPS_BASE_URL}$styleName/style.json?key=$mapTilerKey")
             }
             MapStyleProvider.STADIA -> {
                 val styleName = if (isDark) "alidade_smooth_dark" else "alidade_smooth"
                 val keyQuery = if (stadiaKey.isNotBlank()) "?api_key=$stadiaKey" else ""
-                "${Constants.STADIA_MAPS_BASE_URL}$styleName.json$keyQuery"
+                MapStyleSource.Url("${Constants.STADIA_MAPS_BASE_URL}$styleName.json$keyQuery")
             }
             MapStyleProvider.CARTO -> {
                 val styleName = if (isDark) "dark-matter-gl-style" else "positron-gl-style"
-                "${Constants.CARTO_MAPS_BASE_URL}$styleName/style.json"
+                MapStyleSource.Url("${Constants.CARTO_MAPS_BASE_URL}$styleName/style.json")
             }
             MapStyleProvider.OPENMAP -> {
                 val styleName = if (isDark) "fiord" else "bright"
-                "${Constants.OPENMAP_MAPS_BASE_URL}$styleName"
+                MapStyleSource.Url("${Constants.OPENMAP_MAPS_BASE_URL}$styleName")
             }
         }
     }
 
-    suspend fun getStyleUrl(
+    /**
+     * AMap (高德) only serves raster tiles, so the style document is generated here
+     * instead of being downloaded. Night mode is approximated by desaturating and
+     * clamping the brightest channels of the daytime tiles.
+     */
+    private fun buildAmapStyleJson(isDark: Boolean): String {
+        val tileUrls = (1..Constants.AMAP_TILE_SUBDOMAINS).joinToString(",\n        ") { subdomain ->
+            "\"" + String.format(Locale.US, Constants.AMAP_TILE_URL_FORMAT, subdomain) + "\""
+        }
+        val saturation = if (isDark) -0.7 else 0.0
+        val brightnessMax = if (isDark) 0.45 else 1.0
+        val contrast = if (isDark) 0.1 else 0.0
+        val backgroundColor = if (isDark) "#1a1a1a" else "#f4f1ea"
+        return """
+            {
+              "version": 8,
+              "name": "AMap ${if (isDark) "Night" else "Day"}",
+              "sources": {
+                "amap-tiles": {
+                  "type": "raster",
+                  "tiles": [
+                    $tileUrls
+                  ],
+                  "tileSize": 256,
+                  "minzoom": ${Constants.AMAP_TILE_MIN_ZOOM},
+                  "maxzoom": ${Constants.AMAP_TILE_MAX_ZOOM},
+                  "attribution": "© 高德地图"
+                }
+              },
+              "layers": [
+                {
+                  "id": "amap-background",
+                  "type": "background",
+                  "paint": {
+                    "background-color": "$backgroundColor"
+                  }
+                },
+                {
+                  "id": "amap-base",
+                  "type": "raster",
+                  "source": "amap-tiles",
+                  "minzoom": 0,
+                  "maxzoom": 22,
+                  "paint": {
+                    "raster-opacity": 1,
+                    "raster-saturation": $saturation,
+                    "raster-brightness-min": 0,
+                    "raster-brightness-max": $brightnessMax,
+                    "raster-contrast": $contrast
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+    }
+
+    suspend fun getStyleSource(
         provider: MapStyleProvider,
         isDark: Boolean
-    ): String {
+    ): MapStyleSource {
         val mapTilerKey = journalPreferences.maptilerKey().first()
         val stadiaKey = journalPreferences.stadiaKey().first()
-        return getStyleUrlWithKeys(provider, isDark, mapTilerKey, stadiaKey)
+        return getStyleSourceWithKeys(provider, isDark, mapTilerKey, stadiaKey)
     }
 
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
@@ -248,6 +305,7 @@ object MapProviderUtils : KoinComponent {
             MapStyleProvider.STADIA -> {
                 "${Constants.STADIA_MAPS_BASE_URL}alidade_smooth.json?api_key=$key"
             }
+            MapStyleProvider.AMAP,
             MapStyleProvider.CARTO,
             MapStyleProvider.OPENMAP -> return true
         }

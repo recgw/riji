@@ -32,7 +32,10 @@ import com.denser.june.presentation.components.MapAttributions
 import com.denser.june.presentation.components.MapLibreInitializer
 import com.denser.june.presentation.components.rememberMapDarkMode
 import com.denser.june.presentation.utils.MapProviderUtils
+import com.denser.june.presentation.utils.MapCoordinates
+import com.denser.june.presentation.utils.MapStyleSource
 import com.denser.june.presentation.utils.MapAccentColorizer
+import com.denser.june.presentation.utils.toBaseStyle
 import com.denser.june.presentation.utils.MapAccentColorizer.getMapLibreMap
 import com.denser.june.core.domain.preferences.JournalPreferences
 import org.koin.compose.koinInject
@@ -46,7 +49,6 @@ import org.maplibre.compose.map.MapOptions
 import org.maplibre.compose.map.RenderOptions
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.OrnamentOptions
-import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Position
 
 @Composable
@@ -67,7 +69,7 @@ fun JournalMapItem(
         .collectAsStateWithLifecycle(initialValue = MapTheme.APP)
 
     val mapStyleProvider by journalPreferences.mapStyleProvider()
-        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.MAPTILER)
+        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.AMAP)
     val isMapThemeAccentEnabled by journalPreferences.isMapThemeAccentEnabled()
         .collectAsStateWithLifecycle(initialValue = true)
     val isPlus = LocalIsPlus.current
@@ -78,18 +80,20 @@ fun JournalMapItem(
 
     val cameraState = rememberCameraState(
         firstPosition = CameraPosition(
-            target = Position(location.longitude, location.latitude),
+            target = MapCoordinates.toDisplay(mapStyleProvider, location.latitude, location.longitude)
+                .let { (lat, lon) -> Position(longitude = lon, latitude = lat) },
             zoom = 15.0
         )
     )
 
     val isMapDarkMode by rememberMapDarkMode(savedMapTheme)
-    val mapStyleUrl by produceState("", mapStyleProvider, isMapDarkMode) {
-        value = MapProviderUtils.getStyleUrl(
+    val styleSource by produceState<MapStyleSource?>(initialValue = null, mapStyleProvider, isMapDarkMode) {
+        value = MapProviderUtils.getStyleSource(
             provider = mapStyleProvider,
             isDark = isMapDarkMode
         )
     }
+    val baseStyle = styleSource?.toBaseStyle()
 
     Surface(
         modifier = modifier,
@@ -97,10 +101,10 @@ fun JournalMapItem(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (isInternetAllowed) {
+            if (isInternetAllowed && baseStyle != null) {
                 MaplibreMap(
                     modifier = Modifier.fillMaxSize(),
-                    baseStyle = BaseStyle.Uri(mapStyleUrl),
+                    baseStyle = baseStyle,
                     cameraState = cameraState,
                     onMapLoadFinished = {
                         if (shouldApplyAccents) {
@@ -133,8 +137,8 @@ fun JournalMapItem(
                     )
                 )
 
-                LaunchedEffect(mapStyleUrl, shouldApplyAccents, colorScheme, isMapDarkMode) {
-                    if (!shouldApplyAccents || mapStyleUrl.isBlank()) return@LaunchedEffect
+                LaunchedEffect(styleSource, shouldApplyAccents, colorScheme, isMapDarkMode) {
+                    if (!shouldApplyAccents || styleSource == null) return@LaunchedEffect
                     cameraState.getMapLibreMap()?.getStyle { style ->
                         MapAccentColorizer.applyThemeAccents(
                             style = style,

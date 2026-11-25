@@ -91,7 +91,7 @@ June is localized by community contributors on [Hosted Weblate](https://hosted.w
 - [Wavy Slider](https://github.com/mahozad/wavy-slider)
 - [Koin](https://insert-koin.io/)
 - [Daily You](https://github.com/Demizo/Daily_You)
-- Maps & Tiles: [OpenStreetMap](https://www.openstreetmap.org/), [OpenFreeMap](https://openfreemap.org/), [CARTO](https://carto.com/), [MapTiler](https://www.maptiler.com/), [Stadia Maps](https://stadiamaps.com/)
+- Maps & Tiles: [高德地图 / AMap](https://www.amap.com/), [OpenStreetMap](https://www.openstreetmap.org/), [OpenFreeMap](https://openfreemap.org/), [CARTO](https://carto.com/), [MapTiler](https://www.maptiler.com/), [Stadia Maps](https://stadiamaps.com/)
 - Fonts: [Google Sans Flex](https://github.com/google/fonts), [Roboto Flex](https://github.com/googlefonts/roboto-flex), [Recursive](https://www.recursive.design/), [Shantell Sans](https://shantellsans.com/)
 
 ## Security & Verification

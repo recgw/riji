@@ -15,6 +15,7 @@ object Constants {
 
     // Map Attribution & Copyright Links
     const val MAPLIBRE_URL = "https://maplibre.org/"
+    const val AMAP_URL = "https://www.amap.com/"
     const val MAPTILER_COPYRIGHT_URL = "https://www.maptiler.com/copyright/"
     const val STADIA_ATTRIBUTION_URL = "https://stadiamaps.com/attribution/"
     const val CARTO_ATTRIBUTION_URL = "https://carto.com/attributions"
@@ -33,4 +34,11 @@ object Constants {
     const val MAPTILER_GEOCODING_BASE_URL = "https://api.maptiler.com/geocoding/"
     const val NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
     const val NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
+
+    // AMap (高德) raster tiles. Placeholders {x}/{y}/{z} are filled in by MapLibre.
+    const val AMAP_TILE_URL_FORMAT =
+        "https://webrd0%d.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}"
+    const val AMAP_TILE_SUBDOMAINS = 4
+    const val AMAP_TILE_MIN_ZOOM = 1
+    const val AMAP_TILE_MAX_ZOOM = 18
 }

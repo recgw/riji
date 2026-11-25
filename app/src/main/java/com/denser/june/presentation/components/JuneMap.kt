@@ -214,6 +214,13 @@ fun MapAttributions(
         verticalAlignment = Alignment.CenterVertically
     ) {
         when (provider) {
+            MapStyleProvider.AMAP -> {
+                Text(
+                    text = "© 高德地图",
+                    color = contentColor,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
             MapStyleProvider.MAPTILER -> {
                 Text(
                     text = "© MapTiler © OpenStreetMap",

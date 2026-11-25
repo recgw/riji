@@ -53,6 +53,9 @@ import com.denser.june.core.domain.preferences.PrivacyPreferences
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.koinInject
 import com.denser.june.presentation.utils.MapProviderUtils
+import com.denser.june.presentation.utils.MapCoordinates
+import com.denser.june.presentation.utils.MapStyleSource
+import com.denser.june.presentation.utils.toBaseStyle
 import com.denser.june.presentation.utils.MapSearchResult
 import com.denser.june.core.domain.model.enums.MapStyleProvider
 import com.denser.june.presentation.utils.UiUtils
@@ -70,7 +73,6 @@ import org.maplibre.compose.map.OrnamentOptions
 import org.maplibre.compose.map.GestureOptions
 import org.maplibre.spatialk.geojson.Position
 import org.maplibre.android.geometry.LatLng
-import org.maplibre.compose.style.BaseStyle
 import com.denser.june.presentation.utils.MapAccentColorizer
 import com.denser.june.presentation.utils.MapAccentColorizer.getMapLibreMap
 import java.util.Locale
@@ -95,7 +97,7 @@ fun AddLocationDialog(
         .collectAsStateWithLifecycle(initialValue = MapTheme.APP)
 
     val mapStyleProvider by journalPreferences.mapStyleProvider()
-        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.MAPTILER)
+        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.AMAP)
     val isMapThemeAccentEnabled by journalPreferences.isMapThemeAccentEnabled()
         .collectAsStateWithLifecycle(initialValue = true)
     val isPlus = LocalIsPlus.current
@@ -174,12 +176,17 @@ fun AddLocationDialog(
         mutableStateOf(existingLocation ?: JournalLocation(0.0, 0.0, name = defaultLocationName))
     }
 
-    val startPosition = remember {
+    val startPosition = remember(mapStyleProvider, existingLocation) {
         if (existingLocation != null && existingLocation.latitude != 0.0) {
+            val (lat, lon) = MapCoordinates.toDisplay(
+                mapStyleProvider,
+                existingLocation.latitude,
+                existingLocation.longitude
+            )
             CameraPosition(
                 target = Position(
-                    longitude = existingLocation.longitude,
-                    latitude = existingLocation.latitude
+                    longitude = lon,
+                    latitude = lat
                 ),
                 zoom = 15.0
             )
@@ -189,30 +196,46 @@ fun AddLocationDialog(
     }
     val cameraState = rememberCameraState(firstPosition = startPosition)
 
-    val isAtSelectedLocation by remember(cameraState.position.target, existingLocation) {
+    val isAtSelectedLocation by remember(cameraState.position.target, existingLocation, mapStyleProvider) {
         derivedStateOf {
             existingLocation?.let { existing ->
+                val display = MapCoordinates.toDisplay(
+                    mapStyleProvider,
+                    existing.latitude,
+                    existing.longitude
+                )
                 val target = cameraState.position.target
-                MapProviderUtils.isSameCoordinates(target.latitude, target.longitude, existing.latitude, existing.longitude)
+                MapProviderUtils.isSameCoordinates(
+                    target.latitude,
+                    target.longitude,
+                    display.first,
+                    display.second
+                )
             } ?: false
         }
     }
 
     var isMapDarkMode by rememberMapDarkMode(savedMapTheme)
-    val mapStyleUrl by produceState("", mapStyleProvider, isMapDarkMode) {
-        value = MapProviderUtils.getStyleUrl(
+    val styleSource by produceState<MapStyleSource?>(initialValue = null, mapStyleProvider, isMapDarkMode) {
+        value = MapProviderUtils.getStyleSource(
             provider = mapStyleProvider,
             isDark = isMapDarkMode
         )
     }
+    val baseStyle = styleSource?.toBaseStyle()
 
     val lastFetchedLatLng = remember { mutableStateOf<LatLng?>(null) }
 
-    LaunchedEffect(cameraState.position.target, isInternetAllowed) {
+    LaunchedEffect(cameraState.position.target, isInternetAllowed, mapStyleProvider) {
         val target = cameraState.position.target
         if (target.latitude == 0.0 && target.longitude == 0.0) return@LaunchedEffect
 
-        val newLatLng = LatLng(target.latitude, target.longitude)
+        val (wgsLat, wgsLon) = MapCoordinates.fromDisplay(
+            mapStyleProvider,
+            target.latitude,
+            target.longitude
+        )
+        val newLatLng = LatLng(wgsLat, wgsLon)
         val lastFetched = lastFetchedLatLng.value
 
         if (lastFetched != null && MapProviderUtils.isSameCoordinates(newLatLng.latitude, newLatLng.longitude, lastFetched.latitude, lastFetched.longitude)) {
@@ -227,10 +250,11 @@ fun AddLocationDialog(
     }
 
     fun animateToLocation(latLng: LatLng, zoom: Double = 15.0) {
+        val display = MapCoordinates.toDisplay(mapStyleProvider, latLng)
         scope.launch {
             cameraState.animateTo(
                 finalPosition = CameraPosition(
-                    target = Position(longitude = latLng.longitude, latitude = latLng.latitude),
+                    target = Position(longitude = display.longitude, latitude = display.latitude),
                     zoom = zoom
                 ),
                 duration = 1.5.seconds
@@ -316,10 +340,10 @@ fun AddLocationDialog(
                         .focusRequester(dummyFocusRequester)
                         .focusable()
                 )
-            if (isInternetAllowed && mapStyleUrl.isNotBlank()) {
+            if (isInternetAllowed && baseStyle != null) {
                 MaplibreMap(
                     modifier = Modifier.fillMaxSize(),
-                    baseStyle = BaseStyle.Uri(mapStyleUrl),
+                    baseStyle = baseStyle,
                     cameraState = cameraState,
                     onMapLoadFinished = {
                         if (shouldApplyAccents) {
@@ -352,8 +376,8 @@ fun AddLocationDialog(
                     )
                 )
 
-                LaunchedEffect(mapStyleUrl, shouldApplyAccents, colorScheme, isMapDarkMode) {
-                    if (!shouldApplyAccents || mapStyleUrl.isBlank()) return@LaunchedEffect
+                LaunchedEffect(styleSource, shouldApplyAccents, colorScheme, isMapDarkMode) {
+                    if (!shouldApplyAccents || styleSource == null) return@LaunchedEffect
                     cameraState.getMapLibreMap()?.getStyle { style ->
                         MapAccentColorizer.applyThemeAccents(
                             style = style,

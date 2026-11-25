@@ -145,12 +145,12 @@ class JournalPreferencesImpl(
 
     override fun mapStyleProvider(): Flow<MapStyleProvider> = dataStore.data
         .map { preferences ->
-            val value = preferences[MAP_STYLE_PROVIDER] ?: MapStyleProvider.CARTO.name
+            val value = preferences[MAP_STYLE_PROVIDER] ?: MapStyleProvider.AMAP.name
             try {
                 if (value == "MAPBOX") MapStyleProvider.OPENMAP
                 else MapStyleProvider.valueOf(value)
             } catch (e: Exception) {
-                MapStyleProvider.CARTO
+                MapStyleProvider.AMAP
             }
         }
 
@@ -181,6 +181,7 @@ class JournalPreferencesImpl(
     override fun isMapProviderVerified(provider: MapStyleProvider): Flow<Boolean> = dataStore.data
         .map { preferences ->
             when (provider) {
+                MapStyleProvider.AMAP,
                 MapStyleProvider.CARTO,
                 MapStyleProvider.OPENMAP -> true
                 MapStyleProvider.MAPTILER -> preferences[MAPTILER_KEY_VERIFIED] ?: false
@@ -191,6 +192,7 @@ class JournalPreferencesImpl(
     override suspend fun setMapProviderVerified(provider: MapStyleProvider, verified: Boolean) {
         dataStore.edit { preferences ->
             when (provider) {
+                MapStyleProvider.AMAP,
                 MapStyleProvider.CARTO,
                 MapStyleProvider.OPENMAP -> {}
                 MapStyleProvider.MAPTILER -> preferences[MAPTILER_KEY_VERIFIED] = verified

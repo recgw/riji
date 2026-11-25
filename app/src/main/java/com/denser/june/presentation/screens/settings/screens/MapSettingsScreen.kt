@@ -47,7 +47,10 @@ import com.denser.june.presentation.screens.settings.tiles.DefaultMapThemeTile
 import com.denser.june.presentation.screens.settings.tiles.MapThemeAccentTile
 import com.denser.june.presentation.theme.LocalInternetAllowed
 import com.denser.june.presentation.utils.MapAccentColorizer
+import com.denser.june.presentation.utils.MapCoordinates
 import com.denser.june.presentation.utils.MapProviderUtils
+import com.denser.june.presentation.utils.MapStyleSource
+import com.denser.june.presentation.utils.applyToMap
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.maplibre.android.camera.CameraPosition
@@ -64,7 +67,7 @@ fun MapSettingsScreen() {
     val context = LocalContext.current
 
     val currentProvider by journalPreferences.mapStyleProvider()
-        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.CARTO)
+        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.AMAP)
 
     val mapTilerKey by journalPreferences.maptilerKey()
         .collectAsStateWithLifecycle(initialValue = "")
@@ -86,15 +89,16 @@ fun MapSettingsScreen() {
     var isStadiaKeyLocked by remember { mutableStateOf(true) }
     var isStadiaKeyObscured by remember { mutableStateOf(true) }
 
-    val tabs = listOf("CARTO", "OpenMap", "Stadia", "MapTiler")
-    val selectedTabIndex = when (currentProvider) {
-        MapStyleProvider.CARTO -> 0
-        MapStyleProvider.OPENMAP -> 1
-        MapStyleProvider.STADIA -> 2
-        MapStyleProvider.MAPTILER -> 3
-    }
+    val mapProviders = listOf(
+        MapStyleProvider.AMAP,
+        MapStyleProvider.CARTO,
+        MapStyleProvider.OPENMAP,
+        MapStyleProvider.STADIA,
+        MapStyleProvider.MAPTILER
+    )
+    val selectedTabIndex = mapProviders.indexOf(currentProvider).coerceAtLeast(0)
 
-    var keyTestStatus by remember(selectedTabIndex) { mutableStateOf<Boolean?>(null) }
+    var keyTestStatus by remember(currentProvider) { mutableStateOf<Boolean?>(null) }
     var isTestingKey by remember(selectedTabIndex) { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -104,6 +108,7 @@ fun MapSettingsScreen() {
     var isPreviewDarkMode by rememberMapDarkMode(savedMapTheme)
 
     val currentKey = when (currentProvider) {
+        MapStyleProvider.AMAP,
         MapStyleProvider.CARTO,
         MapStyleProvider.OPENMAP -> ""
         MapStyleProvider.MAPTILER -> mapTilerKey
@@ -116,6 +121,7 @@ fun MapSettingsScreen() {
     val isStadiaConfigured = stadiaKey.isNotBlank()
 
     val isCurrentProviderConfigured = when (currentProvider) {
+        MapStyleProvider.AMAP,
         MapStyleProvider.CARTO,
         MapStyleProvider.OPENMAP -> true
         MapStyleProvider.MAPTILER -> isTilerConfigured
@@ -123,6 +129,7 @@ fun MapSettingsScreen() {
     }
 
     val isCurrentKeyUnlocked = when (currentProvider) {
+        MapStyleProvider.AMAP,
         MapStyleProvider.CARTO,
         MapStyleProvider.OPENMAP -> false
         MapStyleProvider.MAPTILER -> !isMaptilerKeyLocked
@@ -132,15 +139,31 @@ fun MapSettingsScreen() {
     var isMapLoading by remember { mutableStateOf(false) }
     var mapLoadError by remember { mutableStateOf<String?>(null) }
 
-    val locations = remember {
-        listOf(
-            PreviewLocation("Amsterdam", LatLng(52.3730, 4.8926), 14.5),
-            PreviewLocation("Central Park", LatLng(40.785091, -73.968285), 12.0),
-            PreviewLocation("SF", LatLng(37.7950, -122.4020), 11.5),
-            PreviewLocation("Sydney", LatLng(-33.8568, 151.2153), 13.0),
-        )
+    val locations = remember(currentProvider) {
+        val sampleLocations = if (currentProvider == MapStyleProvider.AMAP) {
+            listOf(
+                PreviewLocation("Chengdu", LatLng(30.6595, 104.0633), 13.0),
+                PreviewLocation("Shanghai", LatLng(31.2304, 121.4737), 13.0),
+                PreviewLocation("Beijing", LatLng(39.9042, 116.4074), 12.5),
+                PreviewLocation("Hong Kong", LatLng(22.3193, 114.1694), 12.5),
+            )
+        } else {
+            listOf(
+                PreviewLocation("Amsterdam", LatLng(52.3730, 4.8926), 14.5),
+                PreviewLocation("Central Park", LatLng(40.785091, -73.968285), 12.0),
+                PreviewLocation("SF", LatLng(37.7950, -122.4020), 11.5),
+                PreviewLocation("Sydney", LatLng(-33.8568, 151.2153), 13.0),
+            )
+        }
+        sampleLocations.map {
+            it.copy(latLng = MapCoordinates.toDisplay(currentProvider, it.latLng))
+        }
     }
     var selectedLocationIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(currentProvider) {
+        selectedLocationIndex = 0
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -278,28 +301,28 @@ fun MapSettingsScreen() {
                     }
 
                     MapViewLifecycleEffect(previewMapView)
-                    val mapStyleUrl = remember(currentProvider, isPreviewDarkMode, mapTilerKey, stadiaKey) {
-                        MapProviderUtils.getStyleUrlWithKeys(
+                    val mapStyleSource = remember(currentProvider, isPreviewDarkMode, mapTilerKey, stadiaKey) {
+                        MapProviderUtils.getStyleSourceWithKeys(
                             provider = currentProvider,
                             isDark = isPreviewDarkMode,
                             mapTilerKey = mapTilerKey,
                             stadiaKey = stadiaKey
                         )
                     }
-                      Box(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                             .height(200.dp)
                             .clip(RoundedCornerShape(16.dp))
-                     ) {
-                         if (isCurrentProviderConfigured) {
+                    ) {
+                        if (isCurrentProviderConfigured) {
                             AndroidView(
                                 factory = { previewMapView },
                                 modifier = Modifier.fillMaxSize(),
                                 update = { map ->
-                                    val styleUrl = mapStyleUrl
-                                    val styleKey = "$styleUrl?accent=$previewAccentEnabled&key=$currentKey"
+                                    val source = mapStyleSource
+                                    val styleKey = "$source?accent=$previewAccentEnabled&key=$currentKey"
                                     if (isCurrentKeyUnlocked) {
                                         currentStyleKey = ""
                                         isMapLoading = false
@@ -311,7 +334,7 @@ fun MapSettingsScreen() {
                                             mapboxMap.uiSettings.isAttributionEnabled = false
                                             mapboxMap.uiSettings.isLogoEnabled = false
                                             mapboxMap.uiSettings.isCompassEnabled = false
-                                            mapboxMap.setStyle(styleUrl) { style ->
+                                            source.applyToMap(mapboxMap) { style ->
                                                 isMapLoading = false
                                                 if (previewAccentEnabled) {
                                                     MapAccentColorizer.applyThemeAccents(
@@ -551,21 +574,11 @@ fun MapSettingsScreen() {
                 ) {
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    tabs.forEachIndexed { index, title ->
-                        val tabProvider = when (index) {
-                            0 -> MapStyleProvider.CARTO
-                            1 -> MapStyleProvider.OPENMAP
-                            2 -> MapStyleProvider.STADIA
-                            3 -> MapStyleProvider.MAPTILER
-                            else -> MapStyleProvider.CARTO
-                        }
-                        val isSelected = selectedTabIndex == index
-                        val isActive = currentProvider == tabProvider
-
+                    mapProviders.forEach { tabProvider ->
                         JuneSelectableTabChip(
                             item = tabProvider,
-                            label = title,
-                            isSelected = isSelected,
+                            label = stringResource(tabProvider.displayNameRes),
+                            isSelected = currentProvider == tabProvider,
                             onSelect = { provider ->
                                 if (!isMapLoading) {
                                     scope.launch {
@@ -574,7 +587,7 @@ fun MapSettingsScreen() {
                                 }
                             },
                             enabled = !isMapLoading,
-                            showActiveIndicator = isActive
+                            showActiveIndicator = currentProvider == tabProvider
                         )
                     }
 
@@ -583,8 +596,17 @@ fun MapSettingsScreen() {
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                when (selectedTabIndex) {
-                    0 -> {
+                when (currentProvider) {
+                    MapStyleProvider.AMAP -> {
+                        Text(
+                            text = stringResource(R.string.amap_auto_notice),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    MapStyleProvider.CARTO -> {
                         Text(
                             text = stringResource(R.string.carto_auto_notice),
                             style = MaterialTheme.typography.bodyMedium,
@@ -593,7 +615,7 @@ fun MapSettingsScreen() {
                         )
                     }
 
-                    1 -> {
+                    MapStyleProvider.OPENMAP -> {
                         Text(
                             text = stringResource(R.string.openmap_auto_notice),
                             style = MaterialTheme.typography.bodyMedium,
@@ -602,7 +624,7 @@ fun MapSettingsScreen() {
                         )
                     }
 
-                    2 -> {
+                    MapStyleProvider.STADIA -> {
                         ApiCredentialsSection(
                             keyInput = stadiaKeyInput,
                             onKeyChange = {
@@ -647,7 +669,7 @@ fun MapSettingsScreen() {
                         )
                     }
 
-                    3 -> {
+                    MapStyleProvider.MAPTILER -> {
                         ApiCredentialsSection(
                             keyInput = maptilerKeyInput,
                             onKeyChange = {

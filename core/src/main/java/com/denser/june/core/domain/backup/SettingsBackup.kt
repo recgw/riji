@@ -58,7 +58,7 @@ data class GeneralSettingsBackup(
 @Serializable
 data class MapSettingsBackup(
     val mapTheme: String = "APP",
-    val mapStyleProvider: String = "CARTO",
+    val mapStyleProvider: String = "AMAP",
     val mapThemeAccentEnabled: Boolean = true,
     val maptilerKey: String? = null,
     val stadiaKey: String? = null

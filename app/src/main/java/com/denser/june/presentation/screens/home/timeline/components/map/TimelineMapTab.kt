@@ -33,8 +33,11 @@ import com.denser.june.presentation.screens.home.timeline.TimelineVM
 import com.denser.june.presentation.screens.home.timeline.components.common.EmptyStateMessage
 import com.denser.june.presentation.theme.LocalInternetAllowed
 import com.denser.june.presentation.utils.MapAccentColorizer
+import com.denser.june.presentation.utils.MapCoordinates
 import com.denser.june.presentation.utils.MapProviderUtils
+import com.denser.june.presentation.utils.MapStyleSource
 import com.denser.june.presentation.utils.TimelineMapUtils
+import com.denser.june.presentation.utils.applyToMap
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.maplibre.android.camera.CameraPosition
@@ -70,7 +73,7 @@ fun TimelineMapTab(
     val savedMapTheme by journalPreferences.mapTheme()
         .collectAsStateWithLifecycle(initialValue = MapTheme.APP)
     val mapStyleProvider by journalPreferences.mapStyleProvider()
-        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.MAPTILER)
+        .collectAsStateWithLifecycle(initialValue = MapStyleProvider.AMAP)
     val isMapThemeAccentEnabled by journalPreferences.isMapThemeAccentEnabled()
         .collectAsStateWithLifecycle(initialValue = true)
     val isPlus = com.denser.june.presentation.plus.LocalIsPlus.current
@@ -88,6 +91,18 @@ fun TimelineMapTab(
 
     val locationGroups = remember(sortedPoints) {
         TimelineMapUtils.buildLocationGroups(sortedPoints)
+    }
+
+    // Journal locations are stored as WGS-84; AMap tiles are GCJ-02, so shift them for display.
+    val displayPoints = remember(locationGroups, mapStyleProvider) {
+        locationGroups.map { group ->
+            val (lat, lon) = MapCoordinates.toDisplay(
+                mapStyleProvider,
+                group.location.latitude,
+                group.location.longitude
+            )
+            LatLng(lat, lon)
+        }
     }
 
     var selectedIndex by remember { mutableIntStateOf(0) }
@@ -108,8 +123,8 @@ fun TimelineMapTab(
         Color.Black.copy(alpha = 0.3f).toArgb()
     }
 
-    val styleUrl by produceState(initialValue = "", mapStyleProvider, isDarkMap) {
-        value = MapProviderUtils.getStyleUrl(mapStyleProvider, isDarkMap)
+    val styleSource by produceState<MapStyleSource?>(initialValue = null, mapStyleProvider, isDarkMap) {
+        value = MapProviderUtils.getStyleSource(mapStyleProvider, isDarkMap)
     }
     val mapView = remember(isInternetAllowed) {
         if (isInternetAllowed) {
@@ -128,13 +143,14 @@ fun TimelineMapTab(
         }
     }
 
-    LaunchedEffect(selectedIndex, sortedPoints, mapView) {
+    LaunchedEffect(selectedIndex, sortedPoints, mapView, mapStyleProvider) {
         val target = sortedPoints.getOrNull(selectedIndex)?.location ?: return@LaunchedEffect
+        val display = MapCoordinates.toDisplay(mapStyleProvider, target.latitude, target.longitude)
         mapView?.getMapAsync { map ->
             map.animateCamera(
                 org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(
                     CameraPosition.Builder()
-                        .target(LatLng(target.latitude, target.longitude))
+                        .target(LatLng(display.first, display.second))
                         .zoom(15.0)
                         .build()
                 ),
@@ -152,7 +168,7 @@ fun TimelineMapTab(
                 isDark = isDarkMap
             )
         }
-        val pathPoints = locationGroups.map { LatLng(it.location.latitude, it.location.longitude) }
+        val pathPoints = displayPoints
 
         val lines = if (pathPoints.size > 1) {
             (0 until pathPoints.size - 1).map { i ->
@@ -195,10 +211,11 @@ fun TimelineMapTab(
             style.addImage(imageId, getMarkerBitmap(locationName))
         }
 
-        val markerFeatures = locationGroups.map { group ->
+        val markerFeatures = locationGroups.mapIndexed { index, group ->
             val locationName = group.location.name?.ifBlank { "Location" } ?: "Location"
             val imageId = "marker-icon-$locationName"
-            Feature.fromGeometry(Point.fromLngLat(group.location.longitude, group.location.latitude)).apply {
+            val point = displayPoints[index]
+            Feature.fromGeometry(Point.fromLngLat(point.longitude, point.latitude)).apply {
                 addStringProperty("icon-image", imageId)
             }
         }
@@ -228,7 +245,7 @@ fun TimelineMapTab(
     var hasInitialBoundsAnimated by remember(sortedPoints) { mutableStateOf(false) }
 
     fun animateToInitialBounds(mapboxMap: MapLibreMap) {
-        val pathPoints = locationGroups.map { LatLng(it.location.latitude, it.location.longitude) }
+        val pathPoints = displayPoints
         if (pathPoints.size == 1) {
             mapboxMap.animateCamera(
                 org.maplibre.android.camera.CameraUpdateFactory.newCameraPosition(
@@ -270,15 +287,15 @@ fun TimelineMapTab(
         if (isInternetAllowed && mapView != null) {
             MapViewLifecycleEffect(mapView)
 
-            LaunchedEffect(styleUrl, sortedPoints, mapView, isMapThemeAccentEnabled, colorScheme) {
-                if (styleUrl.isBlank()) return@LaunchedEffect
+            LaunchedEffect(styleSource, sortedPoints, mapView, isMapThemeAccentEnabled, colorScheme) {
+                val source = styleSource ?: return@LaunchedEffect
                 mapView.getMapAsync { mapboxMap ->
                     val previousCamera = mapboxMap.cameraPosition
                     val shouldRestoreCamera = hasInitialBoundsAnimated && previousCamera.zoom > 0
                     mapboxMap.uiSettings.isAttributionEnabled = false
                     mapboxMap.uiSettings.isLogoEnabled = false
                     mapboxMap.uiSettings.isCompassEnabled = false
-                    mapboxMap.setStyle(styleUrl) { style ->
+                    source.applyToMap(mapboxMap) { style ->
                         renderMapContent(mapboxMap, style)
                         if (shouldRestoreCamera) {
                             mapboxMap.moveCamera(
