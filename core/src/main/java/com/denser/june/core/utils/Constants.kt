@@ -36,8 +36,11 @@ object Constants {
     const val NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 
     // AMap (高德) raster tiles. Placeholders {x}/{y}/{z} are filled in by MapLibre.
+    // Use the "wprd" (new generation) host, not "webrd": webrd serves the legacy tile
+    // pyramid frozen around 2016, which is why new roads/POIs went missing.
+    // scl=1 keeps the Chinese label layer, style=7 is the vector road basemap.
     const val AMAP_TILE_URL_FORMAT =
-        "https://webrd0%d.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}"
+        "https://wprd0%d.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scl=1&style=7&x={x}&y={y}&z={z}"
     const val AMAP_TILE_SUBDOMAINS = 4
     const val AMAP_TILE_MIN_ZOOM = 1
     const val AMAP_TILE_MAX_ZOOM = 18
