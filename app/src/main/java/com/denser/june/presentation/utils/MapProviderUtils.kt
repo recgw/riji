@@ -330,7 +330,7 @@ object MapProviderUtils : KoinComponent {
         return try {
             val features = JSONObject(response).optJSONArray("features") ?: return null
             val props = features.optJSONObject(0)?.optJSONObject("properties") ?: return null
-            val street = firstNonBlank(props.optString("street"), props.optString("name"))
+            val street = firstNonBlank(props.optString("street"), props.optString("name")).orEmpty()
             val name = firstNonBlank(
                 street,
                 props.optString("district"),
