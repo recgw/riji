@@ -35,13 +35,25 @@ object Constants {
     const val NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
     const val NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 
+    // Keyless geocoding that stays reachable from mainland China. Nominatim is often
+    // unreachable there (reverse lookups time out), which is why selected points ended
+    // up as "Unknown Location"; Photon returns street/district names in Chinese.
+    const val PHOTON_SEARCH_URL = "https://photon.komoot.io/api/"
+    const val PHOTON_REVERSE_URL = "https://photon.komoot.io/reverse"
+    const val PHOTON_CHINA_BBOX = "73.5,18.0,135.0,53.8"
+
     // AMap (高德) raster tiles. Placeholders {x}/{y}/{z} are filled in by MapLibre.
     // Use the "wprd" (new generation) host, not "webrd": webrd serves the legacy tile
     // pyramid frozen around 2016, which is why new roads/POIs went missing.
-    // scl=1 keeps the Chinese label layer, style=7 is the vector road basemap.
+    // Two layers are stacked: scl=2 style=7 is a 512 px road basemap (sharp up to z19),
+    // scl=1 style=8 is the transparent Chinese label/POI overlay.
     const val AMAP_TILE_URL_FORMAT =
-        "https://wprd0%d.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scl=1&style=7&x={x}&y={y}&z={z}"
+        "https://wprd0%d.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scl=2&style=7&x={x}&y={y}&z={z}"
+    const val AMAP_LABEL_URL_FORMAT =
+        "https://wprd0%d.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scl=1&style=8&x={x}&y={y}&z={z}"
     const val AMAP_TILE_SUBDOMAINS = 4
-    const val AMAP_TILE_MIN_ZOOM = 1
-    const val AMAP_TILE_MAX_ZOOM = 18
+    const val AMAP_TILE_MIN_ZOOM = 4
+    const val AMAP_TILE_MAX_ZOOM = 19
+    const val AMAP_LABEL_MIN_ZOOM = 4
+    const val AMAP_LABEL_MAX_ZOOM = 18
 }
