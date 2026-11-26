@@ -17,7 +17,7 @@ class FossLocationProvider : LocationProvider {
     }
 
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
-    override suspend fun fetchCurrentFix(context: Context): LocationFix? {
+    override suspend fun fetchCurrentCoordinates(context: Context): CoordinateFix? {
         return withContext(Dispatchers.IO) {
             try {
                 val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -38,11 +38,9 @@ class FossLocationProvider : LocationProvider {
                 }
 
                 bestLocation?.let {
-                    LocationFix(
-                        location = MapProviderUtils.updateLocationFromCenter(
-                            context,
-                            LatLng(it.latitude, it.longitude)
-                        ),
+                    CoordinateFix(
+                        latitude = it.latitude,
+                        longitude = it.longitude,
                         accuracyMeters = it.accuracy
                     )
                 }
@@ -51,5 +49,17 @@ class FossLocationProvider : LocationProvider {
                 null
             }
         }
+    }
+
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+    override suspend fun fetchCurrentFix(context: Context): LocationFix? {
+        val fix = fetchCurrentCoordinates(context) ?: return null
+        return LocationFix(
+            location = MapProviderUtils.updateLocationFromCenter(
+                context,
+                LatLng(fix.latitude, fix.longitude)
+            ),
+            accuracyMeters = fix.accuracyMeters
+        )
     }
 }

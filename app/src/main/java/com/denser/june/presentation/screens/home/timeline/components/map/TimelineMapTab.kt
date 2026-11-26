@@ -1,7 +1,10 @@
 package com.denser.june.presentation.screens.home.timeline.components.map
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -38,6 +41,7 @@ import com.denser.june.presentation.utils.MapProviderUtils
 import com.denser.june.presentation.utils.MapStyleSource
 import com.denser.june.presentation.utils.TimelineMapUtils
 import com.denser.june.presentation.utils.applyToMap
+import com.denser.june.presentation.utils.updateUserLocationOnMap
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.maplibre.android.camera.CameraPosition
@@ -113,6 +117,14 @@ fun TimelineMapTab(
 
     var isDarkMap by rememberMapDarkMode(savedMapTheme)
 
+    // Current position dot: only drawn once location permission has been granted elsewhere
+    // in the app, so the timeline never triggers a permission prompt on its own.
+    val hasLocationPermission = remember(context) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
+    var userLocationFix by remember { mutableStateOf<Pair<LatLng, Float?>?>(null) }
+
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary.toArgb()
     val mutedLineColor = if (isMapThemeAccentEnabled) {
@@ -156,6 +168,21 @@ fun TimelineMapTab(
                 ),
                 800
             )
+        }
+    }
+
+    // Coordinates only: on this screen the dot needs no address, so we skip the network
+    // round trip and stay usable offline.
+    LaunchedEffect(mapView, mapStyleProvider, hasLocationPermission) {
+        if (!hasLocationPermission || mapView == null) return@LaunchedEffect
+        val fix = MapProviderUtils.fetchCurrentCoordinates(context) ?: return@LaunchedEffect
+        val display = MapCoordinates.toDisplay(mapStyleProvider, fix.latitude, fix.longitude)
+        val target = LatLng(display.first, display.second)
+        userLocationFix = target to fix.accuracyMeters
+        mapView.getMapAsync { map ->
+            map.style?.let { style ->
+                updateUserLocationOnMap(style, target, fix.accuracyMeters)
+            }
         }
     }
 
@@ -239,6 +266,11 @@ fun TimelineMapTab(
                     )
                 }
             )
+        }
+
+        // Drawn last so the position dot sits above the trajectory and the journal markers.
+        userLocationFix?.let { (target, accuracy) ->
+            updateUserLocationOnMap(style, target, accuracy)
         }
     }
 

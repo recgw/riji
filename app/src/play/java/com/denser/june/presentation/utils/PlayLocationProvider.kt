@@ -18,7 +18,7 @@ class PlayLocationProvider : LocationProvider {
     }
 
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
-    override suspend fun fetchCurrentFix(context: Context): LocationFix? {
+    override suspend fun fetchCurrentCoordinates(context: Context): CoordinateFix? {
         return try {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
             val cancellationTokenSource = CancellationTokenSource()
@@ -29,11 +29,9 @@ class PlayLocationProvider : LocationProvider {
             ).await()
 
             location?.let {
-                LocationFix(
-                    location = MapProviderUtils.updateLocationFromCenter(
-                        context,
-                        LatLng(it.latitude, it.longitude)
-                    ),
+                CoordinateFix(
+                    latitude = it.latitude,
+                    longitude = it.longitude,
                     accuracyMeters = it.accuracy
                 )
             }
@@ -41,5 +39,17 @@ class PlayLocationProvider : LocationProvider {
             e.printStackTrace()
             null
         }
+    }
+
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+    override suspend fun fetchCurrentFix(context: Context): LocationFix? {
+        val fix = fetchCurrentCoordinates(context) ?: return null
+        return LocationFix(
+            location = MapProviderUtils.updateLocationFromCenter(
+                context,
+                LatLng(fix.latitude, fix.longitude)
+            ),
+            accuracyMeters = fix.accuracyMeters
+        )
     }
 }

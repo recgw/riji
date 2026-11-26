@@ -161,6 +161,12 @@ object MapProviderUtils : KoinComponent {
         return locationProvider.fetchCurrentFix(context)
     }
 
+    /** Coordinates only, no reverse geocoding round trip. */
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+    suspend fun fetchCurrentCoordinates(context: Context): CoordinateFix? {
+        return locationProvider.fetchCurrentCoordinates(context)
+    }
+
     private suspend fun performGetRequest(context: Context, url: String): String? {
         return withContext(Dispatchers.IO) {
             try {
