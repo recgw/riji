@@ -119,10 +119,11 @@ fun TimelineMapTab(
 
     // Current position dot: only drawn once location permission has been granted elsewhere
     // in the app, so the timeline never triggers a permission prompt on its own.
-    val hasLocationPermission = remember(context) {
+    // Not remembered: granting the permission later (in the editor) is picked up on the next
+    // recomposition instead of staying stale for the lifetime of the tab.
+    val hasLocationPermission =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    }
     var userLocationFix by remember { mutableStateOf<Pair<LatLng, Float?>?>(null) }
 
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
