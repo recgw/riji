@@ -73,6 +73,13 @@ import org.maplibre.compose.map.OrnamentOptions
 import org.maplibre.compose.map.GestureOptions
 import org.maplibre.spatialk.geojson.Position
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
+import kotlin.math.cos
+import kotlin.math.sin
 import com.denser.june.presentation.utils.MapAccentColorizer
 import com.denser.june.presentation.utils.MapAccentColorizer.getMapLibreMap
 import java.util.Locale
@@ -114,6 +121,7 @@ fun AddLocationDialog(
     var isSearching by remember { mutableStateOf(false) }
     var isFetchingLocation by remember { mutableStateOf(false) }
     var isAddressLoading by remember { mutableStateOf(false) }
+    var userFix by remember { mutableStateOf<Pair<LatLng, Float?>?>(null) }
     var searchResults by remember { mutableStateOf<List<MapSearchResult>>(emptyList()) }
     var isSearchFocused by remember { mutableStateOf(false) }
     var showSearchResults by remember { mutableStateOf(false) }
@@ -265,9 +273,24 @@ fun AddLocationDialog(
     fun performLocationFetch() {
         isFetchingLocation = true
         scope.launch {
-            val location = MapProviderUtils.fetchCurrentLocation(context)
+            val fix = MapProviderUtils.fetchCurrentFix(context)
+            val location = fix?.location
             if (location != null && (location.latitude != 0.0 || location.longitude != 0.0)) {
                 animateToLocation(LatLng(location.latitude, location.longitude))
+                val target = LatLng(location.latitude, location.longitude)
+                userFix = target to fix.accuracyMeters
+                cameraState.getMapLibreMap()?.getStyle { style ->
+                    val display = MapCoordinates.toDisplay(
+                        mapStyleProvider,
+                        target.latitude,
+                        target.longitude
+                    )
+                    updateUserLocationOnMap(
+                        style = style,
+                        displayTarget = LatLng(display.first, display.second),
+                        accuracyMeters = fix.accuracyMeters
+                    )
+                }
             }
             isFetchingLocation = false
         }
@@ -353,6 +376,20 @@ fun AddLocationDialog(
                                     colorScheme = colorScheme,
                                     provider = mapStyleProvider,
                                     isDark = isMapDarkMode
+                                )
+                            }
+                        }
+                        userFix?.let { fix ->
+                            cameraState.getMapLibreMap()?.getStyle { style ->
+                                val display = MapCoordinates.toDisplay(
+                                    mapStyleProvider,
+                                    fix.first.latitude,
+                                    fix.first.longitude
+                                )
+                                updateUserLocationOnMap(
+                                    style = style,
+                                    displayTarget = LatLng(display.first, display.second),
+                                    accuracyMeters = fix.second
                                 )
                             }
                         }
@@ -860,4 +897,62 @@ fun MapSearchBar(
             }
         }
     }
+}
+
+private const val USER_LOCATION_SOURCE_ID = "june-user-location"
+private const val USER_LOCATION_ACCURACY_SOURCE_ID = "june-user-location-accuracy"
+private const val USER_LOCATION_DOT_LAYER_ID = "june-user-location-dot"
+private const val USER_LOCATION_ACCURACY_LAYER_ID = "june-user-location-accuracy-halo"
+private val USER_LOCATION_BLUE = 0xFF1A73E8.toInt()
+
+/**
+ * Renders the "you are here" dot plus the accuracy halo. Layers are created on demand,
+ * so the same path works for the generated AMap style and the downloaded styles.
+ */
+private fun updateUserLocationOnMap(style: Style, displayTarget: LatLng, accuracyMeters: Float?) {
+    ensureUserLocationLayers(style)
+    style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE_ID)
+        ?.setGeoJson(userLocationPointGeoJson(displayTarget))
+    style.getSourceAs<GeoJsonSource>(USER_LOCATION_ACCURACY_SOURCE_ID)
+        ?.setGeoJson(userLocationAccuracyGeoJson(displayTarget, accuracyMeters ?: 30f))
+}
+
+private fun ensureUserLocationLayers(style: Style) {
+    if (style.getSource(USER_LOCATION_SOURCE_ID) != null) return
+    try {
+        style.addSource(GeoJsonSource(USER_LOCATION_SOURCE_ID))
+        style.addSource(GeoJsonSource(USER_LOCATION_ACCURACY_SOURCE_ID))
+        style.addLayer(
+            FillLayer(USER_LOCATION_ACCURACY_LAYER_ID, USER_LOCATION_ACCURACY_SOURCE_ID)
+                .withProperties(
+                    PropertyFactory.fillColor(USER_LOCATION_BLUE),
+                    PropertyFactory.fillOpacity(0.15f)
+                )
+        )
+        style.addLayer(
+            CircleLayer(USER_LOCATION_DOT_LAYER_ID, USER_LOCATION_SOURCE_ID)
+                .withProperties(
+                    PropertyFactory.circleRadius(6.5f),
+                    PropertyFactory.circleColor(USER_LOCATION_BLUE),
+                    PropertyFactory.circleStrokeWidth(2f),
+                    PropertyFactory.circleStrokeColor(android.graphics.Color.WHITE)
+                )
+        )
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+private fun userLocationPointGeoJson(target: LatLng): String =
+    """{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[${target.longitude},${target.latitude}]}}"""
+
+private fun userLocationAccuracyGeoJson(target: LatLng, accuracyMeters: Float): String {
+    val radius = accuracyMeters.toDouble().coerceIn(5.0, 250.0)
+    val latDelta = radius / 111_320.0
+    val lonDelta = radius / (111_320.0 * cos(Math.toRadians(target.latitude)).coerceAtLeast(1e-6))
+    val ring = (0 until 48).map { step ->
+        val angle = 2.0 * Math.PI * step / 48.0
+        "[${target.longitude + lonDelta * cos(angle)},${target.latitude + latDelta * sin(angle)}]"
+    } + "[${target.longitude + lonDelta},${target.latitude}]"
+    return """{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[${ring.joinToString(",")}]]}}"""
 }

@@ -156,6 +156,11 @@ object MapProviderUtils : KoinComponent {
         return locationProvider.fetchCurrentLocation(context)
     }
 
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+    suspend fun fetchCurrentFix(context: Context): LocationFix? {
+        return locationProvider.fetchCurrentFix(context)
+    }
+
     private suspend fun performGetRequest(context: Context, url: String): String? {
         return withContext(Dispatchers.IO) {
             try {
