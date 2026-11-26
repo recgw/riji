@@ -24,6 +24,7 @@ import com.denser.june.core.utils.toLocalDate
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import com.denser.june.core.utils.AppTimeZone
 
 @Composable
 fun TimelineCalendarPage(
@@ -119,7 +120,7 @@ fun CalendarDayTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    val isToday = date == LocalDate.now()
+    val isToday = date == AppTimeZone.today()
     val hasJournals = entryCount > 0
 
     val backgroundColor = when {

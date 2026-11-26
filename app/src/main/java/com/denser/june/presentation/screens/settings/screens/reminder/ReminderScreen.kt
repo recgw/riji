@@ -40,6 +40,7 @@ import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.*
 import androidx.compose.ui.platform.LocalLocale
+import com.denser.june.core.utils.AppTimeZone
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -172,7 +173,7 @@ fun ReminderScreen() {
 
     if (showTimePicker) {
         val initialDateTime = remember(state.time) {
-            combineDateAndTime(LocalDate.now(), LocalTime.parse(state.time))
+            combineDateAndTime(AppTimeZone.today(), LocalTime.parse(state.time))
         }
         JuneDateTimePicker(
             initialDateTimeMillis = initialDateTime,

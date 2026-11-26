@@ -25,9 +25,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipInputStream
+import com.denser.june.core.utils.AppTimeZone
 
 class DailyYouImporter(
     private val journalRepo: JournalRepository? = null,
@@ -608,7 +608,7 @@ class DailyYouImporter(
         } catch (_: Exception) {
             try {
                 val ldt = LocalDateTime.parse(isoString)
-                ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                ldt.atZone(AppTimeZone.zone).toInstant().toEpochMilli()
             } catch (_: Exception) {
                 try {
                     DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(isoString, Instant::from).toEpochMilli()
@@ -631,7 +631,7 @@ class DailyYouImporter(
             Pair(title, remainingContent)
         } else {
             val dateStr = DateTimeFormatter.ofPattern("MMMM d, yyyy")
-                .withZone(ZoneId.systemDefault())
+                .withZone(AppTimeZone.zone)
                 .format(Instant.ofEpochMilli(fallbackTimeMs))
             Pair(dateStr, text)
         }

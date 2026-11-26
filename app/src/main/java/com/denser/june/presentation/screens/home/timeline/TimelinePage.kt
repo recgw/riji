@@ -44,6 +44,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import kotlin.math.abs
+import com.denser.june.core.utils.AppTimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +59,7 @@ fun TimelinePage(
     val isCalendarExpanded by viewModel.isCalendarExpanded.collectAsStateWithLifecycle()
     val startOfWeek by viewModel.startOfWeek.collectAsStateWithLifecycle()
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(AppTimeZone.today()) }
 
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()

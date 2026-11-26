@@ -9,8 +9,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import com.denser.june.core.utils.AppTimeZone
 
 class ReminderSchedulerImpl(
     private val context: Context
@@ -65,22 +65,22 @@ class ReminderSchedulerImpl(
     }
 
     private fun calculateNextTriggerTime(time: LocalTime, days: Set<DayOfWeek>): Long {
-        val now = LocalDateTime.now()
+        val now = AppTimeZone.now()
         val today = now.toLocalDate()
         val todayTime = today.atTime(time)
 
         if (days.contains(today.dayOfWeek) && todayTime.isAfter(now)) {
-            return todayTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            return todayTime.atZone(AppTimeZone.zone).toInstant().toEpochMilli()
         }
 
         for (i in 1..7) {
             val nextDate = today.plusDays(i.toLong())
             if (days.contains(nextDate.dayOfWeek)) {
-                return nextDate.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                return nextDate.atTime(time).atZone(AppTimeZone.zone).toInstant().toEpochMilli()
             }
         }
 
-        return todayTime.plusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return todayTime.plusDays(1).atZone(AppTimeZone.zone).toInstant().toEpochMilli()
     }
 
     companion object {

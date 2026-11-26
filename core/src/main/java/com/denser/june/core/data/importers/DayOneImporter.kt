@@ -24,6 +24,7 @@ import java.io.File
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipInputStream
+import com.denser.june.core.utils.AppTimeZone
 
 class DayOneImporter(
     private val journalRepo: JournalRepository? = null,
@@ -288,7 +289,7 @@ class DayOneImporter(
             Pair(title, remainingContent)
         } else {
             val dateStr = DateTimeFormatter.ofPattern("MMMM d, yyyy")
-                .withZone(java.time.ZoneId.systemDefault())
+                .withZone(AppTimeZone.zone)
                 .format(Instant.ofEpochMilli(fallbackTimeMs))
             Pair(dateStr, text)
         }

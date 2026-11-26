@@ -33,7 +33,7 @@ import com.denser.june.presentation.screens.home.timeline.components.journal.Tim
 import com.denser.june.presentation.theme.provideTypography
 import com.denser.june.presentation.utils.UiUtils
 import java.time.LocalDateTime
-import java.time.ZoneId
+import com.denser.june.core.utils.AppTimeZone
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -77,7 +77,7 @@ Bartosz said we were just chasing an adventure, but @Martha and I knew better. N
 
     val sampleJournal = remember {
         val date = LocalDateTime.of(2019, 11, 4, 22, 14)
-            .atZone(ZoneId.systemDefault())
+            .atZone(AppTimeZone.zone)
             .toInstant()
             .toEpochMilli()
         Journal(

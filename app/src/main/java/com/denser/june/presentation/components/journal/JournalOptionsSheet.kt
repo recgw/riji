@@ -1,8 +1,8 @@
 package com.denser.june.presentation.components.journal
 
 import android.content.Intent
-import android.icu.text.SimpleDateFormat
 import androidx.compose.animation.AnimatedContent
+import com.denser.june.core.utils.AppTimeZone
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -206,7 +206,7 @@ fun JournalOptionsHeader(
     modifier: Modifier = Modifier
 ) {
     val year = remember(journal.dateTime) {
-        SimpleDateFormat("yyyy", Locale.getDefault()).format(Date(journal.dateTime))
+        AppTimeZone.toLocalDate(journal.dateTime).year.toString()
     }
 
     Row(

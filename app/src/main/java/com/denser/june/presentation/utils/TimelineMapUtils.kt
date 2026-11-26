@@ -12,11 +12,11 @@ import com.denser.june.core.domain.model.Journal
 import com.denser.june.core.domain.model.JournalLocation
 import org.maplibre.android.geometry.LatLng
 import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.sqrt
+import com.denser.june.core.utils.AppTimeZone
 
 data class LocationGroup(
     val location: JournalLocation,
@@ -70,7 +70,7 @@ object TimelineMapUtils {
     fun formatGroupDates(journals: List<Journal>): String {
         if (journals.isEmpty()) return ""
         val dates = journals.map { journal ->
-            Instant.ofEpochMilli(journal.dateTime).atZone(ZoneId.systemDefault()).toLocalDate()
+            Instant.ofEpochMilli(journal.dateTime).atZone(AppTimeZone.zone).toLocalDate()
         }.distinct().sorted()
 
         val shortFmt = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())

@@ -26,9 +26,9 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipInputStream
+import com.denser.june.core.utils.AppTimeZone
 
 class StoryPadImporter(
     private val journalRepo: JournalRepository? = null,
@@ -195,7 +195,7 @@ class StoryPadImporter(
         val epochMs = if (year != null && month != null && day != null) {
             try {
                 val ldt = LocalDateTime.of(year, month, day, hour, minute, second)
-                ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                ldt.atZone(AppTimeZone.zone).toInstant().toEpochMilli()
             } catch (_: Exception) {
                 createdAtStr?.let { parseIsoTime(it) } ?: System.currentTimeMillis()
             }
@@ -450,7 +450,7 @@ class StoryPadImporter(
             if (isoString.contains("Z") || (isoString.contains("+") && isoString.lastIndexOf('+') > 10)) {
                 Instant.parse(isoString).toEpochMilli()
             } else {
-                LocalDateTime.parse(isoString).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                LocalDateTime.parse(isoString).atZone(AppTimeZone.zone).toInstant().toEpochMilli()
             }
         } catch (_: Exception) {
             try {

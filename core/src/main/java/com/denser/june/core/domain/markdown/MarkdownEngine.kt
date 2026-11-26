@@ -10,10 +10,10 @@ import kotlinx.serialization.Serializable
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.UUID
+import com.denser.june.core.utils.AppTimeZone
 
 @Serializable
 private data class JournalFrontmatter(
@@ -50,13 +50,13 @@ object MarkdownEngine {
     )
 
     private val yamlDateFormatter: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(AppTimeZone.zone)
 
     private val fileDateFormatter: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(AppTimeZone.zone)
 
     private val timeFormatter: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("HHmm").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("HHmm").withZone(AppTimeZone.zone)
 
     fun toMarkdown(
         journal: Journal,
@@ -294,9 +294,9 @@ object MarkdownEngine {
             try {
                 if (pattern == "yyyy-MM-dd") {
                     val localDate = LocalDate.parse(str, DateTimeFormatter.ofPattern(pattern))
-                    return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    return localDate.atStartOfDay(AppTimeZone.zone).toInstant().toEpochMilli()
                 } else {
-                    val formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
+                    val formatter = DateTimeFormatter.ofPattern(pattern).withZone(AppTimeZone.zone)
                     val parsed = formatter.parse(str)
                     return Instant.from(parsed).toEpochMilli()
                 }

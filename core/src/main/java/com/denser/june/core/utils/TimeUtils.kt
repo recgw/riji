@@ -7,70 +7,60 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import java.time.format.DateTimeFormatter
 
+/** All wall-clock formatting in the app happens in UTC+8, never the device zone. */
+private fun appTimeFormatter(pattern: String, locale: Locale = Locale.getDefault()): SimpleDateFormat =
+    SimpleDateFormat(pattern, locale).apply { timeZone = AppTimeZone.timeZone }
+
 fun Long.toYearMonth(): YearMonth {
-    val localDate = Instant.ofEpochMilli(this)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
+    val localDate = AppTimeZone.toLocalDate(this)
     return YearMonth.from(localDate)
 }
 
 fun Long.toShortMonth(): String {
-    val sdf = SimpleDateFormat("MMM", Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter("MMM").format(Date(this))
 }
 
 fun Long.toDayOfMonth(): String {
-    val sdf = SimpleDateFormat("dd", Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter("dd").format(Date(this))
 }
 
 fun Long.toDateWithDay(): String {
-    val sdf = SimpleDateFormat("EEE, MMM dd, yyyy", Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter("EEE, MMM dd, yyyy").format(Date(this))
 }
 
 fun Long.toFullDate(): String {
-    val sdf = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter("MMMM dd, yyyy").format(Date(this))
 }
 
 fun Long.toMonthDay(): String {
-    val sdf = SimpleDateFormat("MMM dd", Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter("MMM dd").format(Date(this))
 }
 
 fun Long.toMediumDate(): String {
-    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter("MMM d, yyyy").format(Date(this))
 }
 
 fun Long.toExifDateTimeDisplay(): String {
-    val timeSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val timeStr = timeSdf.format(Date(this))
+    val timeStr = appTimeFormatter("HH:mm").format(Date(this))
     return if (timeStr == "00:00") {
-        val dateSdf = SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault())
-        dateSdf.format(Date(this))
+        appTimeFormatter("EEE, MMM d, yyyy").format(Date(this))
     } else {
-        val sdf = SimpleDateFormat("EEE, MMM d, yyyy   •   HH:mm", Locale.getDefault())
-        sdf.format(Date(this))
+        appTimeFormatter("EEE, MMM d, yyyy   •   HH:mm").format(Date(this))
     }
 }
 
 fun Long.toMonthDayTime(is24Hour: Boolean = false): String {
     val pattern = if (is24Hour) "MMM dd '•' HH:mm" else "MMM dd '•' hh:mm a"
-    val sdf = SimpleDateFormat(pattern, Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter(pattern).format(Date(this))
 }
 
 fun Long.toFullDateTime(is24Hour: Boolean = false): String {
     val pattern = if (is24Hour) "MMM dd, yyyy 'at' HH:mm" else "MMM dd, yyyy 'at' hh:mm a"
-    val sdf = SimpleDateFormat(pattern, Locale.getDefault())
-    return sdf.format(Date(this))
+    return appTimeFormatter(pattern).format(Date(this))
 }
 
 fun Long.toHoursMinutesSeconds(): String {
@@ -139,11 +129,9 @@ fun Long.isMidnight(): Boolean {
     return this.toLocalTime() == LocalTime.MIDNIGHT
 }
 
-fun Long.toLocalDate(): LocalDate =
-    Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
+fun Long.toLocalDate(): LocalDate = AppTimeZone.toLocalDate(this)
 
-fun Long.toLocalTime(): LocalTime =
-    Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalTime()
+fun Long.toLocalTime(): LocalTime = AppTimeZone.toLocalTime(this)
 
 fun LocalDate.toFullDate(): String =
     this.format(DateTimeFormatter.ofPattern("MMMM dd, yyyy", Locale.getDefault()))
@@ -159,17 +147,13 @@ fun combineDateAndTime(date: LocalDate, time: LocalTime?): Long {
     } else {
         date.atStartOfDay()
     }
-    return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    return AppTimeZone.toEpochMilli(dateTime)
 }
 
 fun getTodayAtMidnight(): Long {
-    return LocalDate.now()
-        .atStartOfDay(ZoneId.systemDefault())
-        .toInstant()
-        .toEpochMilli()
+    return AppTimeZone.startOfDayEpochMilli(AppTimeZone.today())
 }
 
 fun getWeeksInMonth(yearMonth: YearMonth, startOfWeek: DayOfWeek = DayOfWeek.SUNDAY): Int {
     return yearMonth.getDaysInMonthGrid(startOfWeek).chunked(7).size
 }
-

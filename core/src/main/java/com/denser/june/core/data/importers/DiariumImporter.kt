@@ -20,9 +20,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import com.denser.june.core.utils.AppTimeZone
 
 class DiariumImporter(
     private val journalRepo: JournalRepository? = null,
@@ -37,7 +37,7 @@ class DiariumImporter(
                 val usSinceEpoch = (ticks - TICKS_AT_UNIX_EPOCH) / 10L
                 val instant = Instant.ofEpochMilli(usSinceEpoch / 1000L)
                 val wallClock = LocalDateTime.ofInstant(instant, ZoneOffset.UTC)
-                wallClock.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                wallClock.atZone(AppTimeZone.zone).toInstant().toEpochMilli()
             } catch (_: Exception) {
                 (ticks - TICKS_AT_UNIX_EPOCH) / 10000L
             }
@@ -285,7 +285,7 @@ class DiariumImporter(
                     heading.trim()
                 } else {
                     DateTimeFormatter.ofPattern("MMMM d, yyyy")
-                        .withZone(ZoneId.systemDefault())
+                        .withZone(AppTimeZone.zone)
                         .format(Instant.ofEpochMilli(epochMs))
                 }
 

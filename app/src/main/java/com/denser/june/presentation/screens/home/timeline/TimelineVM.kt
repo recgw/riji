@@ -30,6 +30,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.io.File
 import androidx.core.net.toUri
+import com.denser.june.core.utils.AppTimeZone
 
 enum class TimelineTab(@param:androidx.annotation.StringRes val labelRes: Int, val iconRes: Int) {
     Journals(R.string.journals, R.drawable.list_alt_24px),
@@ -50,7 +51,7 @@ class TimelineVM(
     private var playingJournalId: String? = null
     private val _currentMonth = MutableStateFlow(
         savedStateHandle.get<String>("current_month")?.let { YearMonth.parse(it) }
-            ?: YearMonth.now()
+            ?: AppTimeZone.currentYearMonth()
     )
     val currentMonth = _currentMonth.asStateFlow()
 
@@ -152,7 +153,7 @@ class TimelineVM(
                 val latestJournal = repo.getLatestJournal()
                 if (latestJournal != null) {
                     val latestMonth = latestJournal.dateTime.toYearMonth()
-                    if (latestMonth != YearMonth.now()) {
+                    if (latestMonth != AppTimeZone.currentYearMonth()) {
                         withContext(Dispatchers.Main) {
                             onMonthChange(latestMonth)
                         }
@@ -394,11 +395,11 @@ class TimelineVM(
 
     fun getMonthForPage(page: Int): YearMonth {
         val diff = page - initialPage
-        return YearMonth.now().plusMonths(diff.toLong())
+        return AppTimeZone.currentYearMonth().plusMonths(diff.toLong())
     }
 
     fun getPageForMonth(month: YearMonth): Int {
-        val now = YearMonth.now()
+        val now = AppTimeZone.currentYearMonth()
         val diff = (month.year - now.year) * 12 + (month.monthValue - now.monthValue)
         return initialPage + diff
     }

@@ -44,6 +44,7 @@ import com.denser.june.core.utils.toFullTime
 import java.time.format.TextStyle
 import java.util.Locale
 import androidx.compose.ui.platform.LocalLocale
+import com.denser.june.core.utils.AppTimeZone
 
 enum class JuneDateTimePickerMode {
     DATE_ONLY,
@@ -213,7 +214,7 @@ fun JuneDateTimePicker(
                     if (selectedTab == 0) {
                         Button(
                             onClick = {
-                                val today = LocalDate.now()
+                                val today = AppTimeZone.today()
                                 selectedDate = today
                                 val monthsDiff = ChronoUnit.MONTHS.between(anchorMonth, YearMonth.from(today))
                                 scope.launch {
@@ -238,7 +239,7 @@ fun JuneDateTimePicker(
                     } else {
                         Button(
                             onClick = {
-                                val now = LocalTime.now()
+                                val now = AppTimeZone.timeNow()
                                 timePickerState.hour = now.hour
                                 timePickerState.minute = now.minute
                                 includeTime = true
@@ -402,7 +403,7 @@ fun CalendarPage(
                         Box(modifier = Modifier.weight(1f)) {
                             if (date != null) {
                                 val isSelected = date == selectedDate
-                                val isToday = date == LocalDate.now()
+                                val isToday = date == AppTimeZone.today()
 
                                 Box(
                                     contentAlignment = Alignment.Center,
