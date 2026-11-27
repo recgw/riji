@@ -1,6 +1,7 @@
 package com.denser.june.core.domain.logging
 
 import android.util.Log
+import com.denser.june.core.utils.AppTimeZone
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -28,7 +29,9 @@ object AppLogger {
 
     @Synchronized
     private fun logToBuffer(category: Category, level: String, tag: String, message: String, throwable: Throwable? = null) {
-        val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
+        val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+            .apply { timeZone = AppTimeZone.timeZone }
+            .format(Date())
         val errorMsg = if (throwable != null) "\n${Log.getStackTraceString(throwable)}" else ""
         val entry = "[$timestamp] $level/$tag: $message$errorMsg"
         logBuffer.add(entry)

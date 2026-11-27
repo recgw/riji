@@ -105,6 +105,7 @@ class AutoBackupManager(
 
             val tempFile: File = exportResult.getOrThrow()
             val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
+                .apply { timeZone = com.denser.june.core.utils.AppTimeZone.timeZone }
             val fileName = "June_Auto_Backup_${dateFormat.format(Date())}.zip"
 
             _status.value = BackupOperationStatus.InProgress(

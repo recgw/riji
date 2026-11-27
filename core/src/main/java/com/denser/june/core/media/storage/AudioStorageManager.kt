@@ -6,6 +6,7 @@ import android.net.Uri
 import com.denser.june.core.domain.model.JournalAudio
 import com.denser.june.core.media.compress.AudioCompressor
 import com.denser.june.core.media.exif.AudioMetadataParser
+import com.denser.june.core.utils.AppTimeZone
 import com.denser.june.core.utils.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,7 +24,9 @@ object AudioStorageManager {
     }
 
     fun createTempAudioFile(context: Context, extension: String = "m4a"): File {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(java.util.Date())
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+            .apply { timeZone = AppTimeZone.timeZone }
+            .format(java.util.Date())
         val fileName = "REC_${timeStamp}_"
         return File.createTempFile(fileName, ".$extension", context.cacheDir)
     }

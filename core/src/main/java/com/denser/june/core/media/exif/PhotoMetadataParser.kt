@@ -1,6 +1,7 @@
 package com.denser.june.core.media.exif
 
 import androidx.exifinterface.media.ExifInterface
+import com.denser.june.core.utils.AppTimeZone
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.round
@@ -155,7 +156,10 @@ object PhotoMetadataParser {
     private fun parseExifDate(dateStr: String?): Long? {
         if (dateStr.isNullOrBlank()) return null
         return try {
-            val parsed = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault()).parse(dateStr)?.time
+            // EXIF stores a naive wall clock with no zone; read it in the app zone (UTC+8).
+            val parsed = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault())
+                .apply { timeZone = AppTimeZone.timeZone }
+                .parse(dateStr)?.time
             if (parsed != null && parsed > MIN_VALID_EPOCH_MILLIS) parsed else null
         } catch (_: Exception) {
             null

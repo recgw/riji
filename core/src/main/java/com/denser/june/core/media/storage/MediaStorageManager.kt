@@ -3,6 +3,7 @@ package com.denser.june.core.media.storage
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.denser.june.core.utils.AppTimeZone
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -107,7 +108,9 @@ object MediaStorageManager {
     }
 
     fun createTempPictureUri(context: Context): Uri {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+            .apply { timeZone = AppTimeZone.timeZone }
+            .format(Date())
         val imageFileName = "JPEG_${timeStamp}_"
 
         val image = File.createTempFile(
@@ -124,7 +127,9 @@ object MediaStorageManager {
     }
 
     fun createTempVideoUri(context: Context): Uri {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+            .apply { timeZone = AppTimeZone.timeZone }
+            .format(Date())
         val videoFileName = "MP4_${timeStamp}_"
 
         val video = File.createTempFile(

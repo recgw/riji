@@ -206,8 +206,11 @@ object AudioMetadataParser {
         for (pattern in patterns) {
             try {
                 val sdf = SimpleDateFormat(pattern, Locale.US).apply {
-                    if (pattern.endsWith("'Z'")) {
-                        timeZone = TimeZone.getTimeZone("UTC")
+                    timeZone = if (pattern.endsWith("'Z'")) {
+                        TimeZone.getTimeZone("UTC")
+                    } else {
+                        // Naive patterns carry no zone: treat them as app wall clock (UTC+8).
+                        com.denser.june.core.utils.AppTimeZone.timeZone
                     }
                 }
                 val parsed = sdf.parse(dateStr)
